@@ -4,6 +4,7 @@ import localGPS
 import inertialSensors
 import singleMotor
 import random
+import os
 
 
 class MainThread(threading.Thread):
@@ -33,8 +34,10 @@ class MainThread(threading.Thread):
             time.sleep(0.05)
             print("LocalGPS: {}".format(self.local_gps.get_data()))
             print("InertialSensors: {}".format(self.inertial_sensors.get_data()))
+            motors_list = []
             for motor in self.motors:
-                print("Motor: {}".format(motor.get_current_speed()))
+                motors_list.append(motor.get_current_speed())
+            print("Motor: {}".format(motors_list))
             time.sleep(0.05)
 
     def stop(self):
@@ -48,6 +51,11 @@ class MainThread(threading.Thread):
         self.stop()
 
     def config(self):
+        try:
+            os.system("sudo pigpiod -p 8890")
+            time.sleep(1)
+        except:
+            pass
         self.local_gps = localGPS.LocalGPSThread()
         self.local_gps.config()
         self.inertial_sensors = inertialSensors.InertialSensorsThread()

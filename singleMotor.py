@@ -1,7 +1,6 @@
 import threading
 import time
 import pigpio
-import os
 
 
 class SingleMotorThread(threading.Thread):
@@ -31,6 +30,7 @@ class SingleMotorThread(threading.Thread):
         self.stop()
 
     def config(self, port, esc_pin, min_speed, max_speed):
+        # import os
         # os.system("sudo pigpiod -p 8890")
         # time.sleep(1)
         self.esc = esc_pin
