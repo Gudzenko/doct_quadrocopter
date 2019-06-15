@@ -1,22 +1,29 @@
 import threading
 import time
+import subprocess
 
 
 class InertialSensorsThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.is_running = False
-        self.gyro_x = 0
-        self.gyro_y = 0
-        self.gyro_z = 0
+        self.acceleration = []
+        self.orientation = []
+        self.magnetometer = []
+        self.sensor_path = None
 
     def run(self):
         print("Start inertial sensors thread")
         self.is_running = True
-
-        while self.is_running:
-            self.convert_data()
-            time.sleep(0.1)
+        self.acceleration = [0, 0, 0]
+        self.orientation = [0, 0, 0]
+        self.magnetometer = [0, 0, 0]
+        for line in self.convert_data(self.sensor_path):
+            data = line[:-1].split()
+            data_int = [float(i) for i in data]
+            self.orientation = data_int[:3]
+            self.acceleration = data_int[3:6]
+            self.magnetometer = data_int[6:]
 
     def stop(self):
         self.is_running = False
@@ -25,16 +32,22 @@ class InertialSensorsThread(threading.Thread):
         self.stop()
 
     def config(self):
-        pass
+        self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output euler'.split()
 
-    def convert_data(self):
-        pass
+    def convert_data(self, exe):
+        p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        while self.is_running:
+            return_code = p.poll()
+            line = p.stdout.readline()
+            yield line
+            if return_code is not None:
+                break
 
     def get_data(self):
         obj = dict()
-        obj["gyro_x"] = self.gyro_x
-        obj["gyro_y"] = self.gyro_y
-        obj["gyro_z"] = self.gyro_z
+        obj["acceleration"] = self.acceleration
+        obj["orientation"] = self.orientation
+        obj["magnetometer"] = self.magnetometer
         return obj
 
 

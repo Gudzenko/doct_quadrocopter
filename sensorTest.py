@@ -14,10 +14,18 @@ def run_process(exe):
             break
 
 
+index = 0
+current_time = time.time()
 for line in run_process('/home/pi/minimu9-ahrs/minimu9-ahrs --output euler'.split()):
     # print(line)
     data = line[:-1].split()
     # print(data)
     data_int = [float(i) for i in data]
-    print(data_int)
+    index += 1
+    if index % 1000 == 0:
+        t = time.time()
+        print("Time: {}".format(t - current_time))
+        print("Hrz: {}".format(1000.0 / (t - current_time)))
+        current_time = t
+    # print(data_int)
 
