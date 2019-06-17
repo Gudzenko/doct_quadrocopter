@@ -1,5 +1,13 @@
 import threading
 import time
+
+# try:
+#     import os
+#     os.system("sudo pigpiod -p 8888")
+#     time.sleep(1)
+# except:
+#     pass
+
 import pigpio
 
 
@@ -20,25 +28,28 @@ class SingleMotorThread(threading.Thread):
             time.sleep(0.1)
 
     def stop(self):
-        self.is_running = False
+        print("Stop single motor thread")
         self.current_speed = 0
         if self.is_running:
             self.pi.set_servo_pulsewidth(self.esc, self.current_speed)
             self.pi.stop()
+        self.is_running = False
 
     def __del__(self):
-        self.stop()
+        pass
+        # self.stop()
 
     def config(self, port, esc_pin, min_speed, max_speed):
-        # import os
-        # os.system("sudo pigpiod -p 8890")
-        # time.sleep(1)
         self.esc = esc_pin
         self.current_speed = 0
         self.pi = pigpio.pi(port=port)
         self.pi.set_servo_pulsewidth(self.esc, self.current_speed)
         self.min_speed = min_speed if min_speed else 1000
         self.max_speed = max_speed if max_speed else 2000
+        time.sleep(0.01)
+        self.pi.set_servo_pulsewidth(self.esc, self.max_speed)
+        time.sleep(0.01)
+        self.pi.set_servo_pulsewidth(self.esc, self.min_speed)
 
     def run_motor(self, value):
         if self.is_running:
@@ -54,14 +65,23 @@ class SingleMotorThread(threading.Thread):
 
 if __name__ == "__main__":
     app = SingleMotorThread()
-    app.config(8892, 4, 1100, 2000)
-    app.start()
 
-    i = 1000
-    while True:
-        time.sleep(1)
-        app.run_motor(i)
-        print("Speed: {}".format(app.get_current_speed()))
-        i += 100
-        if i > 2500:
-            app.stop()
+    app.config(8888, 17, 1100, 2000)
+    app.start()
+    time.sleep(0.5)
+
+    app.run_motor(1300)
+    print("Speed: {}".format(app.get_current_speed()))
+    time.sleep(5)
+    app.run_motor(1000)
+    time.sleep(0.1)
+    app.stop()
+
+    # i = 1000
+    # while True:
+    #     time.sleep(1)
+    #     app.run_motor(i)
+    #     print("Speed: {}".format(app.get_current_speed()))
+    #     i += 100
+    #     if i > 2500:
+    #         app.stop()

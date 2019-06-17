@@ -27,7 +27,7 @@ class MainThread(threading.Thread):
         time.sleep(1)
         while self.is_running:
             for motor in self.motors:
-                speed = 1500 + random.randint(-500, 600)
+                speed = 1300  # 1500 + random.randint(-500, 600)
                 motor.run_motor(speed)
                 # print("=> {}".format(speed))
 
@@ -48,11 +48,12 @@ class MainThread(threading.Thread):
             motor.stop()
 
     def __del__(self):
-        self.stop()
+        # self.stop()
+        pass
 
     def config(self):
         try:
-            os.system("sudo pigpiod -p 8890")
+            os.system("sudo pigpiod -p 8888")
             time.sleep(1)
         except:
             pass
@@ -62,7 +63,7 @@ class MainThread(threading.Thread):
         self.inertial_sensors.config()
         for index in range(self.count_motors):
             motor = singleMotor.SingleMotorThread()
-            motor.config(port=8890, esc_pin=4+index, min_speed=1100, max_speed=2000)
+            motor.config(port=8888, esc_pin=17+index, min_speed=1000, max_speed=2000)
             self.motors.append(motor)
 
 
@@ -71,5 +72,8 @@ if __name__ == "__main__":
     app.config()
     app.start()
 
-    while True:
-        time.sleep(0.1)
+    time.sleep(5)
+
+    app.stop()
+    # while True:
+    #     time.sleep(0.1)
