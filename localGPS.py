@@ -82,7 +82,12 @@ class LocalGPSThread(threading.Thread):
                     is_has = False
 
     def convert_data(self):
-        num = self.serial.inWaiting()
+        try:
+            num = self.serial.inWaiting()
+        except Exception as e:
+            print(e)
+            print(num)
+            num = 0
         if num > 0:
             received_data = self.serial.read(num)
             # print("[{}] {}".format(num, received_data))
