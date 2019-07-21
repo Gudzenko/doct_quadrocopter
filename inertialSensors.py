@@ -1,6 +1,7 @@
 import threading
 import time
 import subprocess
+import math
 
 
 class InertialSensorsThread(threading.Thread):
@@ -21,9 +22,13 @@ class InertialSensorsThread(threading.Thread):
         for line in self.convert_data(self.sensor_path):
             data = line[:-1].split()
             data_int = [float(i) for i in data]
-            self.orientation = data_int[:3]
-            self.acceleration = data_int[3:6]
-            self.magnetometer = data_int[6:]
+            # print("{}".format(data_int))
+            self.orientation = self.quaternion2euler(data_int[:4])
+            # self.orientation[0] = data_int[2]
+            # self.orientation[1] = data_int[1]
+            # self.orientation[2] = data_int[0]
+            self.acceleration = data_int[4:7]
+            self.magnetometer = data_int[7:]
 
     def stop(self):
         self.is_running = False
@@ -32,7 +37,8 @@ class InertialSensorsThread(threading.Thread):
         self.stop()
 
     def config(self):
-        self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output euler'.split()
+        # self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output euler'.split()
+        self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output quaternion'.split()
 
     def convert_data(self, exe):
         p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -50,6 +56,18 @@ class InertialSensorsThread(threading.Thread):
         obj["magnetometer"] = self.magnetometer
         return obj
 
+    def quaternion2euler(self, q):
+        euler = [0, 0, 0]
+        if len(q) != 4:
+            print("=============ERROR {}".format(q))
+            return euler
+        euler[0] = math.atan2(2 * (q[0] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] * q[1] + q[2] * q[2]))
+        euler[1] = math.asin(2 * (q[0] * q[2] - q[1] * q[3]))
+        euler[2] = math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3]))
+        for index, e in enumerate(euler):
+            euler[index] = e * 180.0 / math.pi
+        return euler
+
 
 if __name__ == "__main__":
     app = InertialSensorsThread()
@@ -58,4 +76,4 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(0.1)
-        print("Data: {}".format(app.get_data()))
+        print("Data: {}".format((app.get_data())["orientation"]))

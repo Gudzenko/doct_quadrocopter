@@ -229,9 +229,10 @@ class MainThread(threading.Thread):
         self.local_gps.config()
         self.inertial_sensors = inertialSensors.InertialSensorsThread()
         self.inertial_sensors.config()
+        motors_pins = [5, 6, 13, 19]
         for index in range(self.count_motors):
             motor = singleMotor.SingleMotorThread()
-            motor.config(port=8888, esc_pin=4+index, min_speed=1000, max_speed=2000)
+            motor.config(port=8888, esc_pin=motors_pins[index], min_speed=1000, max_speed=2000)
             self.motors.append(motor)
 
 
