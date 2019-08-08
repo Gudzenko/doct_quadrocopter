@@ -43,7 +43,7 @@ class MainThread(threading.Thread):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()
         self.orientation = dict(zip(["x", "y", "z"], MainThread.to_rad(inertial_data["orientation"])))
-        print("LocalGPS: {}".format(self.position))
+        # print("LocalGPS: {}".format(self.position))
         print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
 
     def calibrate_position(self):
@@ -62,7 +62,7 @@ class MainThread(threading.Thread):
         x = 0
         y = 0
         z = 0
-        force = 1
+        force = 0
         dt = 5  # sec
         t_full = self.t_full
         h = 1
@@ -82,12 +82,14 @@ class MainThread(threading.Thread):
             z = h * (t_full - dt - t) / dt
             force = (t_full - dt - t) / dt
         self.trajectory = {"x": x, "y": y, "z": z, "force": force}
-        print("Trajectory: {}".format(self.trajectory))
+        # print("Trajectory: {}".format(self.trajectory))
 
     def set_motors(self, values):
+        str_value = ""
         for index, motor in enumerate(self.motors):
             motor.run_motor(values[index])
-        print("Motor: {}".format(values))
+            str_value += "{:7.2f} ".format(values[index])
+        print("Motor: [{}]".format(str_value))
 
     def control(self):
         trajectory = self.trajectory
@@ -101,7 +103,7 @@ class MainThread(threading.Thread):
         angular_velocity = {"x": 0, "y": 0, "z": 0}
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 4.0
+        KK = 6.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 7 * math.pow(10, -6)
         L = 0.25
@@ -151,7 +153,7 @@ class MainThread(threading.Thread):
         pwm[1] = motors[0] / 4.0 / K2 - motors[2] / 2.0 / L / K2 - motors[3] / 4.0 / K1
         pwm[2] = motors[0] / 4.0 / K2 - motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         pwm[3] = motors[0] / 4.0 / K2 + motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
-        print("PWM: {}".format(pwm))
+        # print("PWM: {}".format(pwm))
         for index, p in enumerate(pwm):
 
             pwm[index] = (self.motors[index].max_speed - self.motors[index].min_speed) / 1000.0 * \
@@ -172,11 +174,12 @@ class MainThread(threading.Thread):
     def run(self):
         print("Start main thread")
         self.is_running = True
-
         self.start_devices()
 
+        print("Start calibration")
         self.calibrate_position()
 
+        print("Start main process")
         self.time = 0
         self.start_time = time.time()
 
@@ -185,7 +188,7 @@ class MainThread(threading.Thread):
 
             # Time
             self.time = time.time() - self.start_time
-            print("Time: {}".format(self.time))
+            print("Time: {:9.3f}".format(self.time))
 
             # Generate trajectory
             self.get_trajectory(self.time)
@@ -204,8 +207,8 @@ class MainThread(threading.Thread):
                 self.stop()
 
             # Orientation limits
-            # if math.fabs(self.orientation["x"]) > self.max_angle or math.fabs(self.orientation["y"]) > self.max_angle:
-            #     self.stop()
+            if math.fabs(self.orientation["x"]) > self.max_angle or math.fabs(self.orientation["y"]) > self.max_angle:
+                self.stop()
 
     def stop(self):
         if self.is_running:
@@ -232,7 +235,7 @@ class MainThread(threading.Thread):
         motors_pins = [5, 6, 13, 19]
         for index in range(self.count_motors):
             motor = singleMotor.SingleMotorThread()
-            motor.config(port=8888, esc_pin=motors_pins[index], min_speed=1000, max_speed=2000)
+            motor.config(port=8888, esc_pin=motors_pins[index], min_speed=800, max_speed=2000)
             self.motors.append(motor)
 
 
@@ -241,8 +244,8 @@ if __name__ == "__main__":
     app.config()
     app.start()
 
-    time.sleep(5)
+    time.sleep(app.t_full + 10)
 
-    # app.stop()
-    while True:
-        time.sleep(0.1)
+    app.stop()
+    # while True:
+    #     time.sleep(0.1)

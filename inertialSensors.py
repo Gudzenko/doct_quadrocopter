@@ -2,6 +2,7 @@ import threading
 import time
 import subprocess
 import math
+import os
 
 
 class InertialSensorsThread(threading.Thread):
@@ -61,9 +62,14 @@ class InertialSensorsThread(threading.Thread):
         if len(q) != 4:
             print("=============ERROR {}".format(q))
             return euler
-        euler[0] = math.atan2(2 * (q[0] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] * q[1] + q[2] * q[2]))
-        euler[1] = math.asin(2 * (q[0] * q[2] - q[1] * q[3]))
-        euler[2] = math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3]))
+        try:
+            euler[0] = math.atan2(2 * (q[0] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] * q[1] + q[2] * q[2]))
+            value = 2 * (q[0] * q[2] - q[1] * q[3])
+            euler[1] = math.asin(value if math.fabs(value) < 1 else math.copysign(1.0, value))
+            euler[2] = math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3]))
+        except Exception as e:
+            print("Error: {}".format(e))
+            euler = [0, 0, 0]
         for index, e in enumerate(euler):
             euler[index] = e * 180.0 / math.pi
         return euler
