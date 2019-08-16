@@ -43,7 +43,7 @@ class MainThread(threading.Thread):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()
         self.orientation = dict(zip(["x", "y", "z"], MainThread.to_rad(inertial_data["orientation"])))
-        # print("LocalGPS: {}".format(self.position))
+        print("LocalGPS: {}".format(self.position))
         print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
 
     def calibrate_position(self):

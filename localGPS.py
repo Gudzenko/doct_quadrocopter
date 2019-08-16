@@ -72,7 +72,7 @@ class LocalGPSThread(threading.Thread):
                     self.data = self.data[:start_index] + self.data[start_index + protocol["length"]:]
                     if protocol["name"] == "coordinates":
                         code1, code2, code3, code4, timestamp, x, y, z, flags, address, orient, t, crc = struct.unpack("<BBHBIiiiBBHHH", select_protocol)
-                        print((timestamp / 1000000.0, x / 1000.0, y / 1000.0, z / 1000.0, flags))
+                        # print((timestamp / 1000000.0, x / 1000.0, y / 1000.0, z / 1000.0, flags))
                         if flags == 2:
                             self.x = x / 1000.0
                             self.y = y / 1000.0
