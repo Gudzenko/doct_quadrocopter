@@ -107,7 +107,7 @@ class MainThread(threading.Thread):
         K1 = 1.14 * math.pow(10, -6)
         K2 = 7 * math.pow(10, -6)
         L = 0.25
-        mass = 1.25
+        mass = 1.35
         g = 9.8
         сoef = 1.0
 
@@ -175,6 +175,7 @@ class MainThread(threading.Thread):
         print("Start main thread")
         self.is_running = True
         self.start_devices()
+        time.sleep(2)
 
         print("Start calibration")
         self.calibrate_position()
@@ -184,7 +185,7 @@ class MainThread(threading.Thread):
         self.start_time = time.time()
 
         while self.is_running:
-            time.sleep(0.1)
+            time.sleep(0.02)
 
             # Time
             self.time = time.time() - self.start_time
@@ -215,8 +216,9 @@ class MainThread(threading.Thread):
             self.is_running = False
             self.local_gps.stop()
             self.inertial_sensors.stop()
-            for motor in self.motors:
-                motor.stop()
+            self.set_motors([800, 800, 800, 800])
+            # for motor in self.motors:
+            #     motor.stop()
 
     def __del__(self):
         # self.stop()
@@ -244,8 +246,8 @@ if __name__ == "__main__":
     app.config()
     app.start()
 
-    time.sleep(app.t_full + 10)
+    # time.sleep(app.t_full + 10)
 
-    app.stop()
-    # while True:
-    #     time.sleep(0.1)
+    # app.stop()
+    while True:
+        time.sleep(0.1)
