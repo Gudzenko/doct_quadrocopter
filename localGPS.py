@@ -84,7 +84,7 @@ class LocalGPSThread(threading.Thread):
     def convert_data(self):
         try:
             num = 0
-            num = self.serial.inWaiting()
+            num = self.serial.in_waiting
         except Exception as e:
             print(e)
             print(num)
@@ -94,9 +94,8 @@ class LocalGPSThread(threading.Thread):
             # print("[{}] {}".format(num, received_data))
             self.add_data(received_data)
         else:
-            self.serial.flushInput()
+            self.serial.reset_input_buffer()
             self.serial.close()
-            os.system("sudo chmod 666 /dev/ttyS0")
             self.serial.open()
 
     def get_data(self):
