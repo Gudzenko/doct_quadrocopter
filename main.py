@@ -103,11 +103,11 @@ class MainThread(threading.Thread):
         angular_velocity = {"x": 0, "y": 0, "z": 0}
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 6.0
+        KK = 4.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 7 * math.pow(10, -6)
         L = 0.25
-        mass = 1.35
+        mass = 1.25
         g = 9.8
         сoef = 1.0
 
