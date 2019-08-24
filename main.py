@@ -20,10 +20,15 @@ class MainThread(threading.Thread):
         self.orientation = {"x": 0, "y": 0, "z": 0}
         self.trajectory = {"x": 0, "y": 0, "z": 0}
         self.time = 0
+        self.dtime = 0
+        self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
         self.t_full = 30
         self.max_angle = 35 * math.pi / 180.0
+        self.file_name = "log.csv"
+        self.file = open(self.file_name, "w")
+        self.file_str = ""
 
     @staticmethod
     def to_rad(values):
@@ -43,8 +48,10 @@ class MainThread(threading.Thread):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()
         self.orientation = dict(zip(["x", "y", "z"], MainThread.to_rad(inertial_data["orientation"])))
-        print("LocalGPS: {}".format(self.position))
-        print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
+        # print("LocalGPS: {}".format(self.position))
+        # print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
+        self.file_str += " ;localGPS; {:8.4f}; {:8.4f}; {:8.4f};".format(self.position["x"], self.position["y"], self.position["z"])
+        self.file_str += " ;Orientation; {:6.1f}; {:6.1f}; {:6.1f};".format(self.orientation["x"] * 180.0 / 3.14, self.orientation["y"] * 180.0 / 3.14, self.orientation["z"] * 180.0 / 3.14)
 
     def calibrate_position(self):
         count = 30
@@ -82,6 +89,7 @@ class MainThread(threading.Thread):
             z = h * (t_full - dt - t) / dt
             force = (t_full - dt - t) / dt
         self.trajectory = {"x": x, "y": y, "z": z, "force": force}
+        self.file_str += "; trajectory ; {:8.4f} ; {:8.4f} ; {:8.4f} ; {:8.4f};".format(x, y, z, force)
         # print("Trajectory: {}".format(self.trajectory))
 
     def set_motors(self, values):
@@ -89,7 +97,9 @@ class MainThread(threading.Thread):
         for index, motor in enumerate(self.motors):
             motor.run_motor(values[index])
             str_value += "{:7.2f} ".format(values[index])
-        print("Motor: [{}]".format(str_value))
+        if self.is_show_logs:
+            print("Motor: [{}]".format(str_value))
+        self.file_str += "; motors ; {:6.1f}; {:6.1f}; {:6.1f}; {:6.1f} ; ".format(values[0], values[1], values[2], values[3])
 
     def control(self):
         trajectory = self.trajectory
@@ -103,11 +113,11 @@ class MainThread(threading.Thread):
         angular_velocity = {"x": 0, "y": 0, "z": 0}
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 4.0
+        KK = 6.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 7 * math.pow(10, -6)
         L = 0.25
-        mass = 1.25
+        mass = 1.05
         g = 9.8
         сoef = 1.0
 
@@ -175,7 +185,6 @@ class MainThread(threading.Thread):
         print("Start main thread")
         self.is_running = True
         self.start_devices()
-        time.sleep(2)
 
         print("Start calibration")
         self.calibrate_position()
@@ -186,10 +195,18 @@ class MainThread(threading.Thread):
 
         while self.is_running:
             time.sleep(0.02)
+            self.file_str = ""
 
             # Time
-            self.time = time.time() - self.start_time
-            print("Time: {:9.3f}".format(self.time))
+            current_time = time.time() - self.start_time
+            self.dtime += current_time - self.time
+            if self.dtime > 0.3:
+                self.dtime -= 0.3
+                self.is_show_logs = True
+            self.time = current_time
+            if self.is_show_logs:
+                print("Time: {:9.3f}".format(self.time))
+            self.file_str += "time; {:9.3f} ; ".format(self.time)
 
             # Generate trajectory
             self.get_trajectory(self.time)
@@ -203,6 +220,9 @@ class MainThread(threading.Thread):
             # Send control on motors
             self.set_motors(speed)
 
+            self.file.write(self.file_str + " ; \n")
+
+            self.is_show_logs = False
             # End of trajectory
             if self.time >= self.t_full:
                 self.stop()
@@ -217,12 +237,21 @@ class MainThread(threading.Thread):
             self.local_gps.stop()
             self.inertial_sensors.stop()
             self.set_motors([800, 800, 800, 800])
+            self.file.close()
+            print("Start save in file")
+            self.file = open(self.file_name, "r")
+            data = self.file.read()
+            new_data = data.replace(".", ",")
+            self.file.close()
+            self.file = open(self.file_name, "w")
+            self.file.write(new_data)
+            self.file.close()
+            print("Finished save in file")
             # for motor in self.motors:
             #     motor.stop()
 
     def __del__(self):
-        # self.stop()
-        pass
+        self.stop()
 
     def config(self):
         try:
