@@ -19,13 +19,14 @@ class MainThread(threading.Thread):
         self.position = {"x": 0, "y": 0, "z": 0}
         self.orientation = {"x": 0, "y": 0, "z": 0}
         self.trajectory = {"x": 0, "y": 0, "z": 0}
+        self.gyro = {"x": 0, "y": 0, "z": 0}
         self.time = 0
         self.dtime = 0
         self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
         self.t_full = 30
-        self.max_angle = 35 * math.pi / 180.0
+        self.max_angle = 45 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
         self.file_str = ""
@@ -48,10 +49,12 @@ class MainThread(threading.Thread):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()
         self.orientation = dict(zip(["x", "y", "z"], MainThread.to_rad(inertial_data["orientation"])))
+        self.gyro = dict(zip(["x", "y", "z"], inertial_data["gyro"]))
         # print("LocalGPS: {}".format(self.position))
         # print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
         self.file_str += " ;localGPS; {:8.4f}; {:8.4f}; {:8.4f};".format(self.position["x"], self.position["y"], self.position["z"])
         self.file_str += " ;Orientation; {:6.1f}; {:6.1f}; {:6.1f};".format(self.orientation["x"] * 180.0 / 3.14, self.orientation["y"] * 180.0 / 3.14, self.orientation["z"] * 180.0 / 3.14)
+        self.file_str += " ;Gyro; {:8.5f}; {:8.5f}; {:8.5f};".format(self.gyro["x"], self.gyro["y"], self.gyro["z"])
 
     def calibrate_position(self):
         count = 30
@@ -70,7 +73,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 5  # sec
+        dt = 1  # sec
         t_full = self.t_full
         h = 1
         if dt <= t < 2 * dt:
@@ -110,12 +113,14 @@ class MainThread(threading.Thread):
         }
         speed = {"x": 0, "y": 0, "z": 0}
         orientation = self.orientation
-        angular_velocity = {"x": 0, "y": 0, "z": 0}
+        # angular_velocity = {"x": 0, "y": 0, "z": 0}
+        angular_velocity = self.gyro
+        angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 6.0
+        KK = 5.0
         K1 = 1.14 * math.pow(10, -6)
-        K2 = 7 * math.pow(10, -6)
+        K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
         mass = 1.05
         g = 9.8
@@ -130,15 +135,15 @@ class MainThread(threading.Thread):
         k2a = KK / 1.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = KK / 4.0
+        k4a = 6.0 / 4.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
-        k12 = 2 * i_x * (k1a + k1b)
+        k12 = 2 * i_x * (k1a + k1b) * 0.75
         k13 = i_x * k1a * k1a * k1b * k1b / g
         k14 = i_x * 2 * k1a * k1b * (k1a + k1b) / g
 
         k21 = (k2a * k2a + 4 * k2a * k2b + k2b * k2b) * i_y
-        k22 = 2 * i_y * (k2a + k2b)
+        k22 = 2 * i_y * (k2a + k2b) * 0.75
         k23 = -1 * i_y * k2a * k2a * k2b * k2b / g
         k24 = -1 * i_y * 2 * k2a * k2b * (k2a + k2b) / g
 

@@ -12,7 +12,9 @@ class InertialSensorsThread(threading.Thread):
         self.acceleration = []
         self.orientation = []
         self.magnetometer = []
+        self.gyro = []
         self.sensor_path = None
+        self.time = 0
 
     def run(self):
         print("Start inertial sensors thread")
@@ -20,14 +22,23 @@ class InertialSensorsThread(threading.Thread):
         self.acceleration = [0, 0, 0]
         self.orientation = [0, 0, 0]
         self.magnetometer = [0, 0, 0]
+        self.gyro = [0, 0, 0]
+        self.time = time.time()
         for line in self.convert_data(self.sensor_path):
+            # print(line)
+            next_time = time.time()
+            dt = next_time - self.time
+            self.time = next_time
             data = line[:-1].split()
             data_int = [float(i) for i in data]
             # print("{}".format(data_int))
-            self.orientation = self.quaternion2euler(data_int[:4])
+            orientation = self.quaternion2euler(data_int[:4])
             # self.orientation[0] = data_int[2]
             # self.orientation[1] = data_int[1]
             # self.orientation[2] = data_int[0]
+            for index in range(3):
+                self.gyro[index] = (orientation[index] - self.orientation[index]) / dt * math.pi / 180.0
+            self.orientation = orientation
             self.acceleration = data_int[4:7]
             self.magnetometer = data_int[7:]
 
@@ -55,6 +66,7 @@ class InertialSensorsThread(threading.Thread):
         obj["acceleration"] = self.acceleration
         obj["orientation"] = self.orientation
         obj["magnetometer"] = self.magnetometer
+        obj["gyro"] = self.gyro
         return obj
 
     def quaternion2euler(self, q):
@@ -82,4 +94,5 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(0.1)
-        print("Data: {}".format((app.get_data())["orientation"]))
+        # print("Data: {}".format((app.get_data())["orientation"]))
+        print("Data: {}".format((app.get_data())))
