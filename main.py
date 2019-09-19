@@ -73,7 +73,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 1  # sec
+        dt = 2  # sec
         t_full = self.t_full
         h = 1
         if dt <= t < 2 * dt:
@@ -118,11 +118,11 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 5.0
+        KK = 7.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.05
+        mass = 1.25
         g = 9.8
         сoef = 1.0
 
@@ -135,7 +135,7 @@ class MainThread(threading.Thread):
         k2a = KK / 1.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = 6.0 / 4.0
+        k4a = 7.0 / 4.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
         k12 = 2 * i_x * (k1a + k1b) * 0.75
