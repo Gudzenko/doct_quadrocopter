@@ -102,7 +102,7 @@ class LocalGPSThread(threading.Thread):
         obj = dict()
         obj["x"] = self.x
         obj["y"] = self.y
-        obj["z"] = -self.z
+        obj["z"] = -1 * self.z
         return obj
 
 

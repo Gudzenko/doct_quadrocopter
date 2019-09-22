@@ -94,5 +94,5 @@ if __name__ == "__main__":
 
     while True:
         time.sleep(0.1)
-        # print("Data: {}".format((app.get_data())["orientation"]))
-        print("Data: {}".format((app.get_data())))
+        print("Data: {}".format((app.get_data())["orientation"]))
+        # print("Data: {}".format((app.get_data())))

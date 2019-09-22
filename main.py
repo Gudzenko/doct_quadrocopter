@@ -3,6 +3,7 @@ import time
 import localGPS
 import inertialSensors
 import singleMotor
+import filter
 import random
 import os
 import math
@@ -16,6 +17,8 @@ class MainThread(threading.Thread):
         self.inertial_sensors = None
         self.motors = []
         self.count_motors = 4
+        self.gyro_filter = filter.Filter(size=3, coef=0.95)
+        self.orientation_filter = filter.Filter()
         self.position = {"x": 0, "y": 0, "z": 0}
         self.orientation = {"x": 0, "y": 0, "z": 0}
         self.trajectory = {"x": 0, "y": 0, "z": 0}
@@ -26,7 +29,7 @@ class MainThread(threading.Thread):
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
         self.t_full = 30
-        self.max_angle = 45 * math.pi / 180.0
+        self.max_angle = 60 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
         self.file_str = ""
@@ -48,8 +51,10 @@ class MainThread(threading.Thread):
     def read_sensors(self):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()
-        self.orientation = dict(zip(["x", "y", "z"], MainThread.to_rad(inertial_data["orientation"])))
-        self.gyro = dict(zip(["x", "y", "z"], inertial_data["gyro"]))
+        self.orientation_filter.add(MainThread.to_rad(inertial_data["orientation"]))
+        self.orientation = dict(zip(["x", "y", "z"], self.orientation_filter.get()))
+        self.gyro_filter.add(inertial_data["gyro"])
+        self.gyro = dict(zip(["x", "y", "z"], self.gyro_filter.get()))
         # print("LocalGPS: {}".format(self.position))
         # print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
         self.file_str += " ;localGPS; {:8.4f}; {:8.4f}; {:8.4f};".format(self.position["x"], self.position["y"], self.position["z"])
@@ -73,7 +78,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 2  # sec
+        dt = 1  # sec
         t_full = self.t_full
         h = 1
         if dt <= t < 2 * dt:
@@ -118,13 +123,14 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 7.0
+        KK = 10.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.25
+        mass = 1.45
         g = 9.8
         сoef = 1.0
+        coef_gyro = 0.0
 
         i_x = tensor[0][0]
         i_y = tensor[1][1]
@@ -135,15 +141,15 @@ class MainThread(threading.Thread):
         k2a = KK / 1.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = 7.0 / 4.0
+        k4a = 9.0 / 4.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
-        k12 = 2 * i_x * (k1a + k1b) * 0.75
+        k12 = 2 * i_x * (k1a + k1b) * coef_gyro
         k13 = i_x * k1a * k1a * k1b * k1b / g
         k14 = i_x * 2 * k1a * k1b * (k1a + k1b) / g
 
         k21 = (k2a * k2a + 4 * k2a * k2b + k2b * k2b) * i_y
-        k22 = 2 * i_y * (k2a + k2b) * 0.75
+        k22 = 2 * i_y * (k2a + k2b) * coef_gyro
         k23 = -1 * i_y * k2a * k2a * k2b * k2b / g
         k24 = -1 * i_y * 2 * k2a * k2b * (k2a + k2b) / g
 
