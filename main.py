@@ -18,7 +18,7 @@ class MainThread(threading.Thread):
         self.motors = []
         self.count_motors = 4
         self.gyro_filter = filter.Filter(size=3, coef=0.95)
-        self.orientation_filter = filter.Filter()
+        self.orientation_filter = filter.Filter(size=3, coef=0.95)
         self.position = {"x": 0, "y": 0, "z": 0}
         self.orientation = {"x": 0, "y": 0, "z": 0}
         self.trajectory = {"x": 0, "y": 0, "z": 0}
@@ -50,7 +50,7 @@ class MainThread(threading.Thread):
 
     def read_sensors(self):
         self.position = self.local_gps.get_data()
-        inertial_data = self.inertial_sensors.get_data()
+        inertial_data = self.inertial_sensors.get_data()[0]
         self.orientation_filter.add(MainThread.to_rad(inertial_data["orientation"]))
         self.orientation = dict(zip(["x", "y", "z"], self.orientation_filter.get()))
         self.gyro_filter.add(inertial_data["gyro"])
@@ -58,7 +58,7 @@ class MainThread(threading.Thread):
         # print("LocalGPS: {}".format(self.position))
         # print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
         self.file_str += " ;localGPS; {:8.4f}; {:8.4f}; {:8.4f};".format(self.position["x"], self.position["y"], self.position["z"])
-        self.file_str += " ;Orientation; {:6.1f}; {:6.1f}; {:6.1f};".format(self.orientation["x"] * 180.0 / 3.14, self.orientation["y"] * 180.0 / 3.14, self.orientation["z"] * 180.0 / 3.14)
+        self.file_str += " ;Orientation; {:8.3f}; {:8.3f}; {:8.3f};".format(self.orientation["x"] * 180.0 / 3.14, self.orientation["y"] * 180.0 / 3.14, self.orientation["z"] * 180.0 / 3.14)
         self.file_str += " ;Gyro; {:8.5f}; {:8.5f}; {:8.5f};".format(self.gyro["x"], self.gyro["y"], self.gyro["z"])
 
     def calibrate_position(self):
@@ -78,24 +78,24 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 1  # sec
+        dt = 8  # sec
         t_full = self.t_full
         h = 1
-        if dt <= t < 2 * dt:
+        if 0 <= t < dt:
             x = 0
             y = 0
-            z = h * (t - dt) / dt
-            force = (t - dt) / dt
-        elif 2 * dt <= t < t_full - 2 * dt:
+            z = h * (t - 0) / dt
+            force = (t - 0) / dt
+        elif dt <= t < t_full - dt:
             x = 0
             y = 0
             z = h
             force = 1
-        elif t_full - 2 * dt <= t < t_full - dt:
+        elif t_full - dt <= t < t_full:
             x = 0
             y = 0
-            z = h * (t_full - dt - t) / dt
-            force = (t_full - dt - t) / dt
+            z = h * (t_full - 0 - t) / dt
+            force = (t_full - 0 - t) / dt
         self.trajectory = {"x": x, "y": y, "z": z, "force": force}
         self.file_str += "; trajectory ; {:8.4f} ; {:8.4f} ; {:8.4f} ; {:8.4f};".format(x, y, z, force)
         # print("Trajectory: {}".format(self.trajectory))
@@ -127,7 +127,7 @@ class MainThread(threading.Thread):
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.45
+        mass = 1.25
         g = 9.8
         сoef = 1.0
         coef_gyro = 0.0
@@ -136,9 +136,9 @@ class MainThread(threading.Thread):
         i_y = tensor[1][1]
         i_z = tensor[2][2]
 
-        k1a = KK / 1.0
+        k1a = KK / 5.0
         k1b = KK / 10.0
-        k2a = KK / 1.0
+        k2a = KK / 5.0
         k2b = KK / 10.0
         k3a = KK / 10.0
         k4a = 9.0 / 4.0
@@ -175,6 +175,8 @@ class MainThread(threading.Thread):
         pwm[2] = motors[0] / 4.0 / K2 - motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         pwm[3] = motors[0] / 4.0 / K2 + motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         # print("PWM: {}".format(pwm))
+        pwm[3] *= 1.1
+
         for index, p in enumerate(pwm):
 
             pwm[index] = (self.motors[index].max_speed - self.motors[index].min_speed) / 1000.0 * \
@@ -186,7 +188,7 @@ class MainThread(threading.Thread):
         # return values
 
     def start_devices(self):
-        self.local_gps.start()
+        # self.local_gps.start()
         self.inertial_sensors.start()
         for motor in self.motors:
             motor.start()
@@ -204,20 +206,28 @@ class MainThread(threading.Thread):
         self.time = 0
         self.start_time = time.time()
 
+        iteration = 0
+
         while self.is_running:
-            time.sleep(0.02)
+            delay_time = 0.01
+            # time.sleep(0.005)
+            iteration += 1
             self.file_str = ""
 
             # Time
             current_time = time.time() - self.start_time
-            self.dtime += current_time - self.time
+            dt_ = current_time - self.time
+            time.sleep(0 if delay_time - dt_ < 0 else delay_time - dt_)  
+            current_time = time.time() - self.start_time
+            dt = current_time - self.time
+            self.dtime += dt
             if self.dtime > 0.3:
                 self.dtime -= 0.3
                 self.is_show_logs = True
             self.time = current_time
             if self.is_show_logs:
-                print("Time: {:9.3f}".format(self.time))
-            self.file_str += "time; {:9.3f} ; ".format(self.time)
+                print("Time: {:9.3f} Iteration: {}".format(self.time, iteration))
+            self.file_str += "time; {:11.5f} ; {:11.5f} ; {:11.5f}".format(self.time, dt_, dt)
 
             # Generate trajectory
             self.get_trajectory(self.time)

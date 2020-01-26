@@ -9,12 +9,13 @@ class InertialSensorsThread(threading.Thread):
     def __init__(self):
         threading.Thread.__init__(self)
         self.is_running = False
+        self.is_new = True
         self.acceleration = []
         self.orientation = []
         self.magnetometer = []
         self.gyro = []
         self.sensor_path = None
-        self.time = 0
+        self.time = 0.0
 
     def run(self):
         print("Start inertial sensors thread")
@@ -38,6 +39,7 @@ class InertialSensorsThread(threading.Thread):
             # self.orientation[2] = data_int[0]
             for index in range(3):
                 self.gyro[index] = (orientation[index] - self.orientation[index]) / dt * math.pi / 180.0
+            self.is_new = True
             self.orientation = orientation
             self.acceleration = data_int[4:7]
             self.magnetometer = data_int[7:]
@@ -63,11 +65,13 @@ class InertialSensorsThread(threading.Thread):
 
     def get_data(self):
         obj = dict()
+        is_new = self.is_new
         obj["acceleration"] = self.acceleration
         obj["orientation"] = self.orientation
         obj["magnetometer"] = self.magnetometer
         obj["gyro"] = self.gyro
-        return obj
+        self.is_new = False
+        return (obj, is_new, self.time)
 
     def quaternion2euler(self, q):
         euler = [0, 0, 0]
@@ -93,6 +97,8 @@ if __name__ == "__main__":
     app.start()
 
     while True:
-        time.sleep(0.1)
-        print("Data: {}".format((app.get_data())["orientation"]))
+        time.sleep(0.01)
+        data = app.get_data()
+        orient = (data[0])["orientation"]
+        print("Data: time={:10.2f} x={:9.3f} y={:9.3f} z={:9.3f} is_new={}".format(data[2], orient[0], orient[1], orient[2], data[1]))
         # print("Data: {}".format((app.get_data())))
