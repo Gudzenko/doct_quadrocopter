@@ -17,8 +17,8 @@ class MainThread(threading.Thread):
         self.inertial_sensors = None
         self.motors = []
         self.count_motors = 4
-        self.gyro_filter = filter.Filter(size=3, coef=0.95)
-        self.orientation_filter = filter.Filter(size=3, coef=0.95)
+        self.gyro_filter = [0, 0, 0]
+        self.orientation_filter = [0, 0, 0]
         self.position = {"x": 0, "y": 0, "z": 0}
         self.orientation = {"x": 0, "y": 0, "z": 0}
         self.trajectory = {"x": 0, "y": 0, "z": 0}
@@ -51,10 +51,10 @@ class MainThread(threading.Thread):
     def read_sensors(self):
         self.position = self.local_gps.get_data()
         inertial_data = self.inertial_sensors.get_data()[0]
-        self.orientation_filter.add(MainThread.to_rad(inertial_data["orientation"]))
-        self.orientation = dict(zip(["x", "y", "z"], self.orientation_filter.get()))
-        self.gyro_filter.add(inertial_data["gyro"])
-        self.gyro = dict(zip(["x", "y", "z"], self.gyro_filter.get()))
+        self.orientation_filter = MainThread.to_rad(self.inertial_sensors.filter_orientation.get())
+        self.orientation = dict(zip(["x", "y", "z"], self.orientation_filter))
+        self.gyro_filter = self.inertial_sensors.filter_gyro.get()
+        self.gyro = dict(zip(["x", "y", "z"], self.gyro_filter))
         # print("LocalGPS: {}".format(self.position))
         # print("Orientation: {}".format(dict(zip(["x", "y", "z"], inertial_data["orientation"]))))
         self.file_str += " ;localGPS; {:8.4f}; {:8.4f}; {:8.4f};".format(self.position["x"], self.position["y"], self.position["z"])
@@ -78,7 +78,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 8  # sec
+        dt = 3  # sec
         t_full = self.t_full
         h = 1
         if 0 <= t < dt:
@@ -123,11 +123,11 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 10.0
+        KK = 7.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.25
+        mass = 1.05
         g = 9.8
         сoef = 1.0
         coef_gyro = 0.0
@@ -141,7 +141,7 @@ class MainThread(threading.Thread):
         k2a = KK / 5.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = 9.0 / 4.0
+        k4a = KK / 10.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
         k12 = 2 * i_x * (k1a + k1b) * coef_gyro
@@ -246,10 +246,12 @@ class MainThread(threading.Thread):
             self.is_show_logs = False
             # End of trajectory
             if self.time >= self.t_full:
+                print('stop time')
                 self.stop()
 
             # Orientation limits
             if math.fabs(self.orientation["x"]) > self.max_angle or math.fabs(self.orientation["y"]) > self.max_angle:
+                print('stop orientation: {} {} {}'.format(self.orientation["x"], self.orientation["y"], self.max_angle))
                 self.stop()
 
     def stop(self):
@@ -282,7 +284,7 @@ class MainThread(threading.Thread):
             pass
         self.local_gps = localGPS.LocalGPSThread()
         self.local_gps.config()
-        self.inertial_sensors = inertialSensors.InertialSensorsThread()
+        self.inertial_sensors = inertialSensors.InertialSensorsThread(save_to_file=True)
         self.inertial_sensors.config()
         motors_pins = [5, 6, 13, 19]
         for index in range(self.count_motors):

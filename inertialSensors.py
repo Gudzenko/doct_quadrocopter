@@ -74,6 +74,10 @@ class InertialSensorsThread(threading.Thread):
         data_to_file += "OrientationFilter;"
         for item in list(self.filter_orientation.get()):
             data_to_file += " {:8.3f};".format(item)
+            
+        data_to_file += "OrientationPrediction;"
+        for item in list(self.filter_orientation.prediction(t=None)):
+            data_to_file += " {:8.3f};".format(item)
 
         data_to_file += "Acceleration;"
         for item in list(self.acceleration):
@@ -81,6 +85,10 @@ class InertialSensorsThread(threading.Thread):
 
         data_to_file += "AccelerationFilter;"
         for item in list(self.filter_acceleration.get()):
+            data_to_file += " {:8.5f};".format(item)
+
+        data_to_file += "AccelerationPrediction;"
+        for item in list(self.filter_acceleration.prediction(t=None)):
             data_to_file += " {:8.5f};".format(item)
 
         data_to_file += "Gyro;"
@@ -170,7 +178,7 @@ if __name__ == "__main__":
     app.start()
 
     t = 0.0
-    while t < 10:
+    while t < 5:
         time.sleep(0.01)
         t += 0.01
         data = app.get_data()
