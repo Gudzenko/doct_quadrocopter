@@ -67,15 +67,15 @@ if __name__ == "__main__":
     app = SingleMotorThread()
 
     # app.config(8888, 5, 800, 2000)  # 1
-    app.config(8888, 6, 800, 2000)  # 2
+    # app.config(8888, 6, 800, 2000)  # 2
     # app.config(8888, 13, 800, 2000)  # 3
-    # app.config(8888, 19, 800, 2000)  # 4
+    app.config(8888, 19, 800, 2000)  # 4
     app.start()
     time.sleep(0.5)
 
     app.run_motor(1500)
     print("Speed: {}".format(app.get_current_speed()))
-    time.sleep(20)
+    time.sleep(120)
     app.run_motor(1000)
     time.sleep(0.1)
     # app.stop()

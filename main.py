@@ -28,7 +28,7 @@ class MainThread(threading.Thread):
         self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
-        self.t_full = 30
+        self.t_full = 10
         self.max_angle = 60 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
@@ -78,7 +78,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 3  # sec
+        dt = 4  # sec
         t_full = self.t_full
         h = 1
         if 0 <= t < dt:
@@ -123,14 +123,14 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 7.0
+        KK = 40.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.05
+        mass = 1.35
         g = 9.8
         сoef = 1.0
-        coef_gyro = 0.0
+        coef_gyro = 1.0
 
         i_x = tensor[0][0]
         i_y = tensor[1][1]
@@ -141,7 +141,7 @@ class MainThread(threading.Thread):
         k2a = KK / 5.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = KK / 10.0
+        k4a = 10.0 / 10.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
         k12 = 2 * i_x * (k1a + k1b) * coef_gyro
@@ -155,6 +155,9 @@ class MainThread(threading.Thread):
 
         k31 = k3a * k3a * i_z
         k32 = 2 * k3a * i_z
+
+        k31 = 0
+        k32 = 0 
 
         k41 = k4a * k4a
         k42 = 2 * k4a
@@ -175,7 +178,6 @@ class MainThread(threading.Thread):
         pwm[2] = motors[0] / 4.0 / K2 - motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         pwm[3] = motors[0] / 4.0 / K2 + motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         # print("PWM: {}".format(pwm))
-        pwm[3] *= 1.1
 
         for index, p in enumerate(pwm):
 
