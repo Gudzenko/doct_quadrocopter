@@ -28,8 +28,8 @@ class MainThread(threading.Thread):
         self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
-        self.t_full = 10
-        self.max_angle = 60 * math.pi / 180.0
+        self.t_full = 15
+        self.max_angle = 30 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
         self.file_str = ""
@@ -62,7 +62,7 @@ class MainThread(threading.Thread):
         self.file_str += " ;Gyro; {:8.5f}; {:8.5f}; {:8.5f};".format(self.gyro["x"], self.gyro["y"], self.gyro["z"])
 
     def calibrate_position(self):
-        count = 30
+        count = 90
         position = [0, 0, 0]
         for i in range(count):
             time.sleep(0.1)
@@ -78,7 +78,7 @@ class MainThread(threading.Thread):
         y = 0
         z = 0
         force = 0
-        dt = 4  # sec
+        dt = 2  # sec
         t_full = self.t_full
         h = 1
         if 0 <= t < dt:
@@ -123,14 +123,14 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 40.0
+        KK = 20.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.35
+        mass = 1.15
         g = 9.8
         сoef = 1.0
-        coef_gyro = 1.0
+        coef_gyro = 0.0
 
         i_x = tensor[0][0]
         i_y = tensor[1][1]
@@ -177,12 +177,21 @@ class MainThread(threading.Thread):
         pwm[1] = motors[0] / 4.0 / K2 - motors[2] / 2.0 / L / K2 - motors[3] / 4.0 / K1
         pwm[2] = motors[0] / 4.0 / K2 - motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
         pwm[3] = motors[0] / 4.0 / K2 + motors[1] / 2.0 / L / K2 + motors[3] / 4.0 / K1
+        
+        # pwm[2] *= 1.075
+        # pwm[3] *= 1.055
         # print("PWM: {}".format(pwm))
+        
+        add_coef = [1.0, 1.0, 1.075, 1.055]
 
         for index, p in enumerate(pwm):
 
             pwm[index] = (self.motors[index].max_speed - self.motors[index].min_speed) / 1000.0 * \
                          round(math.pow(p, 0.5)) * trajectory["force"] + self.motors[index].min_speed
+            pwm[index] *= add_coef[index]
+            pwm[index] = round(pwm[index]) if pwm[index] < self.motors[index].max_speed else self.motors[index].max_speed
+            pwm[index] = round(pwm[index]) if pwm[index] > self.motors[index].min_speed else self.motors[index].min_speed
+            
         return pwm
         # values = []
         # for motor in self.motors:

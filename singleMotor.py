@@ -73,9 +73,9 @@ if __name__ == "__main__":
     app.start()
     time.sleep(0.5)
 
-    app.run_motor(1500)
+    app.run_motor(1800 * 1.06)
     print("Speed: {}".format(app.get_current_speed()))
-    time.sleep(120)
+    time.sleep(10)
     app.run_motor(1000)
     time.sleep(0.1)
     # app.stop()
