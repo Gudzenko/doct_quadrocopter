@@ -1,35 +1,35 @@
 import threading
 import time
-import subprocess
 import math
-import os
 from filter import Filter
+from mpu6050 import mpu6050
 
 
-class InertialSensorsThread(threading.Thread):
+class InertialSensors2Thread(threading.Thread):
     def __init__(self, save_to_file=False):
         threading.Thread.__init__(self)
         self.is_running = False
         dt = 0.02
+        self.dt = dt
+        self.sensor = mpu6050(0x68)
         self.is_new = True
         self.acceleration = []
-        self.filter_acceleration = Filter(size=3, dt=dt, t=0.04)
+        self.filter_acceleration = Filter(size=3, dt=dt, t=1.0)
         self.orientation = []
-        self.filter_orientation = Filter(size=3, dt=dt, t=1.0)
+        self.filter_orientation = Filter(size=3, dt=dt, t=0.04)
         self.magnetometer = []
-        self.filter_magnetometer = Filter(size=3, dt=dt, t=0.04)
+        self.filter_magnetometer = Filter(size=3, dt=dt, t=1.0)
         self.gyro = []
-        self.filter_gyro = Filter(size=3, dt=dt, t=0.04)
-        self.sensor_path = None
+        self.filter_gyro = Filter(size=3, dt=dt, t=1.0)
         self.time = 0.0
         self.time_start = 0.0
         self.save_to_file = save_to_file
         if self.save_to_file:
-            self.file_name = "inertialSensorsLogs.csv"
+            self.file_name = "inertialSensors2Logs.csv"
             self.file = open(self.file_name, "w")
 
     def run(self):
-        print("Start inertial sensors thread")
+        print("Start inertial sensors2 thread")
         self.is_running = True
         self.acceleration = [0, 0, 0]
         self.orientation = [0, 0, 0]
@@ -37,32 +37,61 @@ class InertialSensorsThread(threading.Thread):
         self.gyro = [0, 0, 0]
         self.time_start = time.time()
         self.time = self.time_start
-        for line in self.convert_data(self.sensor_path):
+        while self.is_running:
             # print(line)
             if not self.is_running:
                 break
             next_time = time.time()
             dt = next_time - self.time
             self.time = next_time
-            data = line[:-1].split()
-            data_int = [float(i) for i in data]
-            # print("{}".format(data_int))
-            orientation = self.quaternion2euler(data_int[:4])
-            # self.orientation[0] = data_int[2]
-            # self.orientation[1] = data_int[1]
-            # self.orientation[2] = data_int[0]
-            for index in range(3):
-                self.gyro[index] = (orientation[index] - self.orientation[index]) / dt * math.pi / 180.0
-            self.is_new = True
+            data = self.sensor.get_all_data()
+            self.acceleration[0] = data[0]["x"]
+            self.acceleration[1] = data[0]["y"]
+            self.acceleration[2] = data[0]["z"]
+            self.filter_acceleration.add(self.acceleration)
+            self.gyro[0] = data[1]["x"]
+            self.gyro[1] = data[1]["y"]
+            self.gyro[2] = data[1]["z"]
             self.filter_gyro.add(self.gyro)
+            orientation = self.calc_orientation()
+
+            self.is_new = True
+
             self.orientation = orientation
             self.filter_orientation.add(self.orientation)
-            self.acceleration = data_int[4:7]
-            self.filter_acceleration.add(self.acceleration)
-            self.magnetometer = data_int[7:]
+
             self.filter_magnetometer.add(self.magnetometer)
             if self.save_to_file:
                 self.to_file()
+
+            dt1 = time.time() - next_time
+            time.sleep(self.dt - dt1 if self.dt - dt1 > 0 else 0)
+
+    def dist(self, a, b):
+        return math.sqrt(a * a + b * b)
+
+    def get_y_rotation(self, x, y, z):
+        radians = math.atan2(x, self.dist(y, z))
+        return -math.degrees(radians)
+
+    def get_x_rotation(self, x, y, z):
+        radians = math.atan2(y, self.dist(x, z))
+        return math.degrees(radians)
+
+    def get_z_rotation(self, x, y, z):
+        return 0
+
+    def angle(self, prev, gyro, accel):
+        return 0.98 * (prev + gyro * self.dt) + 0.02 * accel
+
+    def calc_orientation(self):
+        gyro = self.filter_gyro.get()
+        orientation = self.orientation
+        acc = self.filter_acceleration.get()
+        Ux = self.angle(orientation[0], gyro[0], self.get_x_rotation(acc[0], acc[1], acc[2]))
+        Uy = self.angle(orientation[1], gyro[1], self.get_y_rotation(acc[0], acc[1], acc[2]))
+        Uz = self.angle(orientation[2], gyro[2], self.get_z_rotation(acc[0], acc[1], acc[2]))
+        return [Ux, Uy, Uz]
 
     def to_file(self):
         data_to_file = ""
@@ -127,17 +156,8 @@ class InertialSensorsThread(threading.Thread):
         self.stop()
 
     def config(self):
-        # self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output euler'.split()
-        self.sensor_path = '/home/pi/minimu9-ahrs/minimu9-ahrs --output quaternion'.split()
-
-    def convert_data(self, exe):
-        p = subprocess.Popen(exe, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        while self.is_running:
-            return_code = p.poll()
-            line = p.stdout.readline()
-            yield line
-            if return_code is not None:
-                break
+        self.sensor.set_gyro_range(self.sensor.GYRO_RANGE_1000DEG)
+        self.sensor.set_accel_range(self.sensor.ACCEL_RANGE_8G)
 
     def get_data(self):
         obj = dict()
@@ -149,40 +169,21 @@ class InertialSensorsThread(threading.Thread):
         self.is_new = False
         return (obj, is_new, self.time)
 
-    def quaternion2euler(self, q):
-        euler = [0, 0, 0]
-        if len(q) != 4:
-            print("=============ERROR {}".format(q))
-            return euler
-        try:
-            euler[0] = math.atan2(2 * (q[0] * q[1] + q[2] * q[3]), 1 - 2 * (q[1] * q[1] + q[2] * q[2]))
-            value = 2 * (q[0] * q[2] - q[1] * q[3])
-            euler[1] = math.asin(value if math.fabs(value) < 1 else math.copysign(1.0, value))
-            euler[2] = math.atan2(2 * (q[0] * q[3] + q[1] * q[2]), 1 - 2 * (q[2] * q[2] + q[3] * q[3]))
-        except Exception as e:
-            print("Error: {}".format(e))
-            euler = [0, 0, 0]
-        for index, e in enumerate(euler):
-            euler[index] = e * 180.0 / math.pi
-        return euler
-
 
 if __name__ == "__main__":
-    try:
-        os.system("sudo pigpiod -p 8888")
-        time.sleep(1)
-    except:
-        pass
-    app = InertialSensorsThread(save_to_file=True)
+    app = InertialSensors2Thread(save_to_file=True)
     app.config()
     app.start()
-
+    
+    sensor = mpu6050(0x68)
     t = 0.0
-    while t < 10:
-        time.sleep(0.01)
-        t += 0.01
+    dt = 0.1
+    while t < 5:
+        time.sleep(dt)
+        t += dt
+
         data = app.get_data()
         orient = (data[0])["orientation"]
         print("Data: time={:10.2f} x={:9.3f} y={:9.3f} z={:9.3f} is_new={}".format(data[2], orient[0], orient[1], orient[2], data[1]))
-        # print("Data: {}".format((app.get_data())))
+
     app.stop()

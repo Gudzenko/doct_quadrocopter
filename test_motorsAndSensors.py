@@ -1,4 +1,5 @@
 import inertialSensors
+import inertialSensors2
 import singleMotor
 import time
 import os
@@ -10,7 +11,7 @@ if __name__ == "__main__":
         time.sleep(1)
     except:
         pass
-    app_sensor = inertialSensors.InertialSensorsThread(save_to_file=True)
+    app_sensor = inertialSensors2.InertialSensors2Thread(save_to_file=True)
     app_sensor.config()
     app_sensor.start()
     
@@ -23,12 +24,14 @@ if __name__ == "__main__":
     time.sleep(0.5)
     
     value = 1300
+    values = [value, 800, 800, value]
+    #values = [value, value, value, value]
     for index in range(4):
-        app[index].run_motor(value)
+        app[index].run_motor(values[index])
         print("Speed {}: {}".format(index + 1, app[index].get_current_speed()))
         
     t = 0.0
-    while t < 10:
+    while t < 20:
         time.sleep(0.01)
         t += 0.01
         data = app_sensor.get_data()
