@@ -9,18 +9,18 @@ class InertialSensors2Thread(threading.Thread):
     def __init__(self, save_to_file=False):
         threading.Thread.__init__(self)
         self.is_running = False
-        dt = 0.02
+        dt = 0.01
         self.dt = dt
         self.sensor = mpu6050(0x68)
         self.is_new = True
         self.acceleration = []
-        self.filter_acceleration = Filter(size=3, dt=dt, t=1.0)
+        self.filter_acceleration = Filter(size=3, dt=dt, t=0.04)
         self.orientation = []
         self.filter_orientation = Filter(size=3, dt=dt, t=0.04)
         self.magnetometer = []
         self.filter_magnetometer = Filter(size=3, dt=dt, t=1.0)
         self.gyro = []
-        self.filter_gyro = Filter(size=3, dt=dt, t=1.0)
+        self.filter_gyro = Filter(size=3, dt=dt, t=0.04)
         self.time = 0.0
         self.time_start = 0.0
         self.save_to_file = save_to_file
@@ -156,8 +156,8 @@ class InertialSensors2Thread(threading.Thread):
         self.stop()
 
     def config(self):
-        self.sensor.set_gyro_range(self.sensor.GYRO_RANGE_1000DEG)
-        self.sensor.set_accel_range(self.sensor.ACCEL_RANGE_8G)
+        self.sensor.set_gyro_range(self.sensor.GYRO_RANGE_250DEG)
+        self.sensor.set_accel_range(self.sensor.ACCEL_RANGE_2G)
 
     def get_data(self):
         obj = dict()
@@ -177,8 +177,8 @@ if __name__ == "__main__":
     
     sensor = mpu6050(0x68)
     t = 0.0
-    dt = 0.1
-    while t < 5:
+    dt = app.dt
+    while t < 20:
         time.sleep(dt)
         t += dt
 

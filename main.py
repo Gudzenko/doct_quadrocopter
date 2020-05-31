@@ -28,7 +28,7 @@ class MainThread(threading.Thread):
         self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
-        self.t_full = 15
+        self.t_full = 30
         self.max_angle = 30 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
@@ -62,7 +62,7 @@ class MainThread(threading.Thread):
         self.file_str += " ;Gyro; {:8.5f}; {:8.5f}; {:8.5f};".format(self.gyro["x"], self.gyro["y"], self.gyro["z"])
 
     def calibrate_position(self):
-        count = 90
+        count = 30
         position = [0, 0, 0]
         for i in range(count):
             time.sleep(0.1)
@@ -182,7 +182,7 @@ class MainThread(threading.Thread):
         # pwm[3] *= 1.055
         # print("PWM: {}".format(pwm))
         
-        add_coef = [1.0, 1.0, 1.075, 1.055]
+        add_coef = [1.06, 1.0, 1.075, 1.055]
 
         for index, p in enumerate(pwm):
 
