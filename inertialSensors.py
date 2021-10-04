@@ -15,7 +15,7 @@ class InertialSensorsThread(threading.Thread):
         self.acceleration = []
         self.filter_acceleration = Filter(size=3, dt=dt, t=0.04)
         self.orientation = []
-        self.filter_orientation = Filter(size=3, dt=dt, t=1.0)
+        self.filter_orientation = Filter(size=3, dt=dt, t=0.04)
         self.magnetometer = []
         self.filter_magnetometer = Filter(size=3, dt=dt, t=0.04)
         self.gyro = []

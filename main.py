@@ -28,8 +28,8 @@ class MainThread(threading.Thread):
         self.is_show_logs = False
         self.start_time = time.time()
         self.start_position = {"x": 0, "y": 0, "z": 0}
-        self.t_full = 30
-        self.max_angle = 30 * math.pi / 180.0
+        self.t_full = 7
+        self.max_angle = 45 * math.pi / 180.0
         self.file_name = "log.csv"
         self.file = open(self.file_name, "w")
         self.file_str = ""
@@ -80,7 +80,7 @@ class MainThread(threading.Thread):
         force = 0
         dt = 2  # sec
         t_full = self.t_full
-        h = 1
+        h = 0.75 # 1
         if 0 <= t < dt:
             x = 0
             y = 0
@@ -123,11 +123,11 @@ class MainThread(threading.Thread):
         angular_velocity["z"] = 0
 
         tensor = [[0.005, 0, 0], [0, 0.005, 0], [0, 0, 0.01]]
-        KK = 20.0
+        KK = 100.0
         K1 = 1.14 * math.pow(10, -6)
         K2 = 6.5 * math.pow(10, -6)  # 7
         L = 0.25
-        mass = 1.15
+        mass = 0.6 # 1.4
         g = 9.8
         сoef = 1.0
         coef_gyro = 0.0
@@ -141,7 +141,7 @@ class MainThread(threading.Thread):
         k2a = KK / 5.0
         k2b = KK / 10.0
         k3a = KK / 10.0
-        k4a = 10.0 / 10.0
+        k4a = 3.0 / 10.0
 
         k11 = (k1a * k1a + 4 * k1a * k1b + k1b * k1b) * i_x
         k12 = 2 * i_x * (k1a + k1b) * coef_gyro
@@ -182,7 +182,9 @@ class MainThread(threading.Thread):
         # pwm[3] *= 1.055
         # print("PWM: {}".format(pwm))
         
-        add_coef = [1.06, 1.0, 1.075, 1.055]
+        # add_coef = [1.06, 1.0, 1.075, 1.055]
+        
+        add_coef = [1.0, 1.0, 1.0, 1.0]
 
         for index, p in enumerate(pwm):
 
@@ -199,7 +201,7 @@ class MainThread(threading.Thread):
         # return values
 
     def start_devices(self):
-        # self.local_gps.start()
+        self.local_gps.start()
         self.inertial_sensors.start()
         for motor in self.motors:
             motor.start()
@@ -297,10 +299,10 @@ class MainThread(threading.Thread):
         self.local_gps.config()
         self.inertial_sensors = inertialSensors.InertialSensorsThread(save_to_file=True)
         self.inertial_sensors.config()
-        motors_pins = [5, 6, 13, 19]
+        motors_pins = [5, 6, 26, 19]
         for index in range(self.count_motors):
             motor = singleMotor.SingleMotorThread()
-            motor.config(port=8888, esc_pin=motors_pins[index], min_speed=800, max_speed=2000)
+            motor.config(port=8888, esc_pin=motors_pins[index], min_speed=1150, max_speed=2000)
             self.motors.append(motor)
 
 

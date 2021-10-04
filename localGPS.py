@@ -35,11 +35,16 @@ class LocalGPSThread(threading.Thread):
     def run_local_gps(self):
         while self.is_running:
             self.convert_data()
-            time.sleep(0.01)
+            time.sleep(0.05)
 
     def config(self, baud_rate=57600):
-        os.system("sudo chmod 666 /dev/ttyS0")
-        self.serial = serial.Serial("/dev/ttyS0", baud_rate)
+        try:
+            os.system("sudo chmod 666 /dev/ttyS0")
+            self.serial = serial.Serial("/dev/ttyS0", baud_rate, timeout=0.2)
+        except Exception as e:
+            time.sleep(0.3)
+            print("try again config")
+            self.config()
 
     def add_data(self, data):
         self.data += data
@@ -89,14 +94,20 @@ class LocalGPSThread(threading.Thread):
             print(e)
             print(num)
             num = 0
+            time.sleep(0.2)
         if num > 0:
             received_data = self.serial.read(num)
             # print("[{}] {}".format(num, received_data))
             self.add_data(received_data)
         else:
-            self.serial.reset_input_buffer()
+            pass
+            # print("Zero")
+            #time.sleep(0.03)
+            #self.serial.reset_input_buffer()
             self.serial.close()
-            self.serial.open()
+            #time.sleep(0.03)
+            self.config()
+            #self.serial.open()
 
     def get_data(self):
         obj = dict()

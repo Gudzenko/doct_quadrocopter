@@ -1,5 +1,6 @@
 import threading
 import time
+import os
 
 # try:
 #     import os
@@ -64,20 +65,26 @@ class SingleMotorThread(threading.Thread):
 
 
 if __name__ == "__main__":
+    try:
+        os.system("sudo pigpiod -p 8888")
+        time.sleep(1)
+    except:
+        pass
     app = SingleMotorThread()
 
-    # app.config(8888, 5, 800, 2000)  # 1
-    app.config(8888, 6, 800, 2000)  # 2
-    # app.config(8888, 13, 800, 2000)  # 3
-    # app.config(8888, 19, 800, 2000)  # 4
+    # app.config(8888, 5, 800, 2500)  # 1
+    app.config(8888, 6, 800, 2500)  # 2
+    # app.config(8888, 13, 800, 2500)  # 3
+    # app.config(8888, 19, 800, 2500)  # 4
     app.start()
     time.sleep(0.5)
 
-    app.run_motor(1900)
+    app.run_motor(1160)
     print("Speed: {}".format(app.get_current_speed()))
-    time.sleep(10)
+    time.sleep(15)
     app.run_motor(1000)
     time.sleep(0.1)
+    print("STOP")
     # app.stop()
 
     # i = 1000

@@ -1,8 +1,17 @@
 import inertialSensors
-import inertialSensors2
+# import inertialSensors2
 import singleMotor
 import time
 import os
+
+
+def init_motors(app):
+    for index in range(4):
+        app[index].run_motor(2000)
+        time.sleep(0.1)
+        app[index].run_motor(1000)
+        #time.sleep(0.1)
+    time.sleep(1)
 
 
 if __name__ == "__main__":
@@ -14,19 +23,23 @@ if __name__ == "__main__":
     app_sensor = inertialSensors.InertialSensorsThread(save_to_file=True)
     app_sensor.config()
     app_sensor.start()
-    time.sleep(3)
+    time.sleep(5)
     
-    pins = [5, 6, 13, 19]
+    pins = [5, 6, 26, 19]
     app = []
     for index in range(4):
         app.append(singleMotor.SingleMotorThread())
-        app[index].config(8888, pins[index], 800, 2000)
+        app[index].config(8888, pins[index], 800, 2500)
         app[index].start()
     time.sleep(0.5)
     
-    value = 1600
+    value = 1300
+    value1 = 1500
     # values = [800, value, 800, 800]
     values = [value, value, value, value]
+    
+    # init_motors(app)
+    
     for index in range(4):
         app[index].run_motor(values[index])
         print("Speed {}: {}".format(index + 1, app[index].get_current_speed()))
@@ -42,6 +55,6 @@ if __name__ == "__main__":
     app_sensor.stop()
 
     for index in range(4):
-        app[index].run_motor(1000)
+        app[index].run_motor(800)
     time.sleep(0.1)
     
